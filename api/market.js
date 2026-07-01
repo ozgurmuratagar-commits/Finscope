@@ -1,113 +1,96 @@
 function round(n, digits = 2) {
-  if (typeof n !== 'number' || !isFinite(n)) return null;
-  return Number(n.toFixed(digits));
+  return typeof n === 'number' && Number.isFinite(n) ? Number(n.toFixed(digits)) : null;
 }
 
-async function safeJson(url, timeoutMs = 8000) {
+async function fetchJson(url) {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), timeoutMs);
+  const id = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'FinScope/0.4' }
+      headers: { 'user-agent': 'FinScope/0.5', 'accept': 'application/json' },
+      cache: 'no-store'
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
-    clearTimeout(t);
+    clearTimeout(id);
   }
 }
 
-async function yahooQuote(symbol) {
-  try {
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
-    const json = await safeJson(url);
-    const q = json?.quoteResponse?.result?.[0];
-    if (!q) return null;
-    return {
-      price: q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice ?? null,
-      changePercent: q.regularMarketChangePercent ?? null,
-      time: q.regularMarketTime ? new Date(q.regularMarketTime * 1000).toISOString() : null
-    };
-  } catch (e) {
-    return null;
-  }
+function parseYahooQuote(json, symbol) {
+  const row = json?.quoteResponse?.result?.find(x => x.symbol === symbol) || json?.quoteResponse?.result?.[0];
+  if (!row) return { value: null, changePct: null, status: 'unavailable', source: 'Yahoo Finance' };
+  return {
+    value: round(row.regularMarketPrice, 2),
+    changePct: round(row.regularMarketChangePercent, 2),
+    status: typeof row.regularMarketPrice === 'number' ? 'live' : 'unavailable',
+    source: 'Yahoo Finance'
+  };
 }
 
-async function metals() {
-  try {
-    const g = await safeJson('https://api.metals.live/v1/spot');
-    // metals.live commonly returns [{gold:...},{silver:...},...]
-    let gold = null, silver = null;
-    if (Array.isArray(g)) {
-      for (const item of g) {
-        if (item.gold && !gold) gold = Number(item.gold);
-        if (item.silver && !silver) silver = Number(item.silver);
-      }
-    }
-    return { gold, silver, source: 'metals.live' };
-  } catch (e) {
-    return { gold: null, silver: null, source: 'yedek' };
-  }
-}
-
-module.exports = async function handler(req, res) {
-  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
 
-  const now = new Date();
-  let fxSource = 'open.er-api.com';
-  let rates = null;
+  const assets = [];
+  const now = new Date().toISOString();
+
   try {
-    const fx = await safeJson('https://open.er-api.com/v6/latest/USD');
-    rates = fx?.rates || null;
+    const fx = await fetchJson('https://open.er-api.com/v6/latest/USD');
+    const rates = fx?.rates || {};
+    const usdTry = rates.TRY;
+    const eurTry = usdTry && rates.EUR ? usdTry / rates.EUR : null;
+    const gbpTry = usdTry && rates.GBP ? usdTry / rates.GBP : null;
+    const eurUsd = rates.EUR ? 1 / rates.EUR : null;
+    const gbpUsd = rates.GBP ? 1 / rates.GBP : null;
+
+    assets.push(
+      { symbol: 'USDTRY', title: 'USD / TRY', value: round(usdTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: usdTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
+      { symbol: 'EURTRY', title: 'EUR / TRY', value: round(eurTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: eurTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
+      { symbol: 'GBPTRY', title: 'GBP / TRY', value: round(gbpTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: gbpTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
+      { symbol: 'EURUSD', title: 'EUR / USD', value: round(eurUsd, 4), unit: '', changePct: null, category: 'Parite', status: eurUsd ? 'live' : 'unavailable', source: 'open.er-api.com' },
+      { symbol: 'GBPUSD', title: 'GBP / USD', value: round(gbpUsd, 4), unit: '', changePct: null, category: 'Parite', status: gbpUsd ? 'live' : 'unavailable', source: 'open.er-api.com' }
+    );
   } catch (e) {
-    fxSource = 'yedek';
+    ['USD / TRY','EUR / TRY','GBP / TRY','EUR / USD','GBP / USD'].forEach((title, i) => assets.push({ symbol: ['USDTRY','EURTRY','GBPTRY','EURUSD','GBPUSD'][i], title, value: null, unit: title.includes('TRY') ? '₺' : '', changePct: null, category: title.includes('TRY') ? 'Döviz' : 'Parite', status: 'unavailable', source: 'open.er-api.com' }));
   }
 
-  const TRY = rates?.TRY || 39.5;
-  const EUR = rates?.EUR || 0.92;
-  const GBP = rates?.GBP || 0.78;
+  const yahooSymbols = ['GC=F','SI=F','XU100.IS','XU050.IS','XU030.IS'];
+  try {
+    const y = await fetchJson('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(yahooSymbols.join(',')));
+    const map = {
+      'GC=F': ['GOLD', 'Altın Ons', '$', 'Kıymetli Maden'],
+      'SI=F': ['SILVER', 'Gümüş Ons', '$', 'Kıymetli Maden'],
+      'XU100.IS': ['XU100', 'BIST 100', '', 'Endeks'],
+      'XU050.IS': ['XU50', 'BIST 50', '', 'Endeks'],
+      'XU030.IS': ['XU30', 'BIST 30', '', 'Endeks']
+    };
+    for (const s of yahooSymbols) {
+      const q = parseYahooQuote(y, s);
+      const [symbol, title, unit, category] = map[s];
+      assets.push({ symbol, title, value: q.value, unit, changePct: q.changePct, category, status: q.status, source: q.source });
+    }
+  } catch (e) {
+    [
+      ['GOLD', 'Altın Ons', '$', 'Kıymetli Maden'],
+      ['SILVER', 'Gümüş Ons', '$', 'Kıymetli Maden'],
+      ['XU100', 'BIST 100', '', 'Endeks'],
+      ['XU50', 'BIST 50', '', 'Endeks'],
+      ['XU30', 'BIST 30', '', 'Endeks']
+    ].forEach(([symbol,title,unit,category]) => assets.push({ symbol, title, value: null, unit, changePct: null, category, status: 'unavailable', source: 'Yahoo Finance' }));
+  }
 
-  const usdTry = TRY;
-  const eurTry = TRY / EUR;
-  const gbpTry = TRY / GBP;
-  const eurUsd = 1 / EUR;
-  const gbpUsd = 1 / GBP;
+  ['PBR','PHE','TLY'].forEach(symbol => assets.push({
+    symbol,
+    title: symbol,
+    value: null,
+    unit: '',
+    changePct: null,
+    category: 'TEFAS Fon',
+    status: 'not_connected',
+    source: 'TEFAS bağlantısı yok'
+  }));
 
-  const [x100, x50, x30, m] = await Promise.all([
-    yahooQuote('XU100.IS'),
-    yahooQuote('XU050.IS'),
-    yahooQuote('XU030.IS'),
-    metals()
-  ]);
-
-  const assets = [
-    { symbol: 'USDTRY', label: 'USD / TRY', category: 'Döviz', value: round(usdTry, 2), unit: '₺', change: 0, source: fxSource, status: fxSource === 'yedek' ? 'yedek' : 'canlı' },
-    { symbol: 'EURTRY', label: 'EUR / TRY', category: 'Döviz', value: round(eurTry, 2), unit: '₺', change: 0, source: fxSource, status: fxSource === 'yedek' ? 'yedek' : 'canlı' },
-    { symbol: 'GBPTRY', label: 'GBP / TRY', category: 'Döviz', value: round(gbpTry, 2), unit: '₺', change: 0, source: fxSource, status: fxSource === 'yedek' ? 'yedek' : 'canlı' },
-    { symbol: 'EURUSD', label: 'EUR / USD', category: 'Parite', value: round(eurUsd, 4), unit: '', change: 0, source: fxSource, status: fxSource === 'yedek' ? 'yedek' : 'canlı' },
-    { symbol: 'GBPUSD', label: 'GBP / USD', category: 'Parite', value: round(gbpUsd, 4), unit: '', change: 0, source: fxSource, status: fxSource === 'yedek' ? 'yedek' : 'canlı' },
-    { symbol: 'XAUUSD', label: 'Altın Ons', category: 'Kıymetli Maden', value: round(m.gold || 2456.12, 2), unit: '$', change: 0, source: m.source, status: m.gold ? 'canlı/harici' : 'yedek' },
-    { symbol: 'XAGUSD', label: 'Gümüş Ons', category: 'Kıymetli Maden', value: round(m.silver || 31.06, 2), unit: '$', change: 0, source: m.source, status: m.silver ? 'canlı/harici' : 'yedek' },
-    { symbol: 'XU100', label: 'BIST 100', category: 'Endeks', value: round(x100?.price || 10450, 2), unit: '', change: round(x100?.changePercent || 0, 2), source: 'Yahoo Finance', status: x100?.price ? 'gecikmeli' : 'yedek' },
-    { symbol: 'XU050', label: 'BIST 50', category: 'Endeks', value: round(x50?.price || 9350, 2), unit: '', change: round(x50?.changePercent || 0, 2), source: 'Yahoo Finance', status: x50?.price ? 'gecikmeli' : 'yedek' },
-    { symbol: 'XU030', label: 'BIST 30', category: 'Endeks', value: round(x30?.price || 11420, 2), unit: '', change: round(x30?.changePercent || 0, 2), source: 'Yahoo Finance', status: x30?.price ? 'gecikmeli' : 'yedek' },
-    { symbol: 'PBR', label: 'PBR', category: 'TEFAS Fon', value: 1.92, unit: '', change: 0, source: 'TEFAS bağlantısı sonraki sürüm', status: 'demo' },
-    { symbol: 'PHE', label: 'PHE', category: 'TEFAS Fon', value: 3.14, unit: '', change: 0, source: 'TEFAS bağlantısı sonraki sürüm', status: 'demo' },
-    { symbol: 'TLY', label: 'TLY', category: 'TEFAS Fon', value: 2.88, unit: '', change: 0, source: 'TEFAS bağlantısı sonraki sürüm', status: 'demo' }
-  ];
-
-  const liveCount = assets.filter(a => a.status.includes('canlı') || a.status === 'gecikmeli').length;
-  res.status(200).json({
-    updatedAt: now.toISOString(),
-    dateLabel: now.toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' }),
-    liveCount,
-    assets,
-    notes: [
-      'Döviz verileri open.er-api.com üzerinden alınır.',
-      'BIST verisi Yahoo Finance üzerinden gecikmeli gelebilir.',
-      'TEFAS fonları bu sürümde demo değerle gösterilir.'
-    ]
-  });
-};
+  res.status(200).json({ updatedAt: now, assets });
+}

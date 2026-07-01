@@ -1,7 +1,9 @@
-# FinScope v0.4 Live
+# FinScope v0.5
 
-- Serverless API: `/api/market`
-- Gerçek FX verisi: open.er-api.com
-- BIST denemesi: Yahoo Finance server-side fetch, başarısız olursa gecikmeli/yedek değer
-- Kartlar tıklanabilir
-- Tarih ve veri kaynağı bilgisi eklendi
+Bu sürümün amacı yanlış veri göstermemektir.
+
+- Döviz verisi: open.er-api.com üzerinden alınır.
+- Altın/Gümüş/BIST verisi: Yahoo Finance public endpoint üzerinden denenir.
+- Veri alınamazsa sahte değer gösterilmez; kartta "veri alınamadı" görünür.
+- Fonlar: TEFAS canlı bağlantısı henüz eklenmediği için "canlı bağlantı yok" olarak gösterilir.
+- Kartlara tıklayınca ekranda detay penceresi açılır.
