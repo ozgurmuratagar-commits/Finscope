@@ -1,3 +1,2 @@
-# FinScope
-
-Statik Vercel sürümü. Kartlar tıklanabilir; döviz verileri open.er-api üzerinden güncellenir. Diğer piyasa değerleri yedek veri olarak gösterilir.
+# FinScope v0.3
+Statik, tıklanabilir FinScope paneli. Vercel üzerinde sıfır build hatası hedeflenmiştir.
