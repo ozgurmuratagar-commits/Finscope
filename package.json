@@ -1,1 +1,9 @@
-{"name":"finscope-static","version":"0.3.0","private":true,"scripts":{"build":"echo static build complete"}}
+{
+  "name": "finscope-v04-live",
+  "version": "0.4.0",
+  "private": true,
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {}
+}
