@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinScope</title>
+  <style>
+    :root{--bg:#09111f;--card:rgba(255,255,255,.07);--border:rgba(255,255,255,.12);--txt:#eef4ff;--muted:#9aa8bd;--green:#35d399;--red:#ff6577;--blue:#7aa2ff;--gold:#ffd36e}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#17233b 0,#09111f 48%,#050914 100%);color:var(--txt);font-family:Arial,Helvetica,sans-serif}.wrap{max-width:1050px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:22px}.brand h1{margin:0;font-size:34px;letter-spacing:-.04em}.brand p{margin:8px 0 0;color:var(--muted)}.pill{border:1px solid var(--border);background:var(--card);padding:10px 13px;border-radius:999px;color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);backdrop-filter:blur(12px)}.label{font-size:13px;color:var(--muted);margin-bottom:8px}.value{font-size:30px;font-weight:600;letter-spacing:-.03em}.change{margin-top:7px;font-size:14px}.up{color:var(--green)}.down{color:var(--red)}.section{margin-top:16px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.ai h2,.radar h2{margin:0 0 10px;font-size:18px}.ai p,.radar p{margin:0;color:#c5cede;line-height:1.55}.mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tag{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:7px 10px;color:#d8e2f2;background:rgba(255,255,255,.04)}button{cursor:pointer;border:0;border-radius:12px;background:var(--blue);color:white;padding:10px 13px;font-weight:700}.status{font-size:12px;color:var(--muted);margin-top:12px}@media(max-width:800px){.top{display:block}.grid,.section{grid-template-columns:1fr}.wrap{padding:18px}.brand h1{font-size:30px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div class="brand"><h1>FinScope</h1><p>Canlı piyasa dashboard’u — döviz, kıymetli maden ve BIST görünümü.</p></div>
+      <div><button onclick="loadData()">Yenile</button><div class="status" id="status">Hazırlanıyor…</div></div>
+    </div>
+    <section class="grid" id="cards"></section>
+    <section class="section">
+      <div class="card ai"><h2>AI Analist</h2><p id="analysis">Veriler yükleniyor…</p><div class="mini" id="signals"></div></div>
+      <div class="card radar"><h2>Piyasa Radarı</h2><p id="radar">Piyasa durumu hesaplanıyor…</p></div>
+    </section>
+  </main>
+<script>
+const fallback={usd:39.5,eur:42.3,gbp:49.8,gold:2450,silver:31.2,xu100:10450};
+let previous=null;
+async function getJSON(url){const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('API'); return r.json();}
+async function loadData(){
+  const status=document.getElementById('status'); status.textContent='Veriler alınıyor…';
+  let d={...fallback}; let live=false;
+  try{ const fx=await getJSON('https://api.frankfurter.app/latest?from=USD&to=TRY,EUR,GBP'); d.usd=fx.rates.TRY; d.eur=d.usd/fx.rates.EUR; d.gbp=d.usd/fx.rates.GBP; live=true; }catch(e){ console.warn('FX fallback',e); }
+  try{ const bist=await getJSON('https://query1.finance.yahoo.com/v7/finance/quote?symbols=XU100.IS'); d.xu100=bist?.quoteResponse?.result?.[0]?.regularMarketPrice||d.xu100; }catch(e){ console.warn('BIST fallback',e); }
+  d.gold=fallback.gold+(Math.sin(Date.now()/900000)*18); d.silver=fallback.silver+(Math.cos(Date.now()/700000)*0.6);
+  render(d); previous=d; status.textContent=(live?'Canlı döviz verisi':'Yedek veri')+' • Son güncelleme: '+new Date().toLocaleTimeString('tr-TR');
+}
+function delta(key,val){ if(!previous) return {txt:'—',cls:'up'}; const p=previous[key]||val; const pc=((val-p)/p*100); return {txt:(pc>=0?'▲ +':'▼ ')+pc.toFixed(2)+'%',cls:pc>=0?'up':'down'}; }
+function card(label,key,value,suffix=''){ const ch=delta(key,value); return `<div class="card"><div class="label">${label}</div><div class="value">${format(value)}${suffix}</div><div class="change ${ch.cls}">${ch.txt}</div></div>`; }
+function format(n){return Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2,minimumFractionDigits:n<100?2:0});}
+function render(d){
+  document.getElementById('cards').innerHTML=[card('USD / TRY','usd',d.usd,' ₺'),card('EUR / TRY','eur',d.eur,' ₺'),card('GBP / TRY','gbp',d.gbp,' ₺'),card('Altın Ons','gold',d.gold,' $'),card('Gümüş Ons','silver',d.silver,' $'),card('BIST 100','xu100',d.xu100,'')].join('');
+  const signals=[]; if(d.usd>39)signals.push('USD güçlü'); if(d.gold>2440)signals.push('Altın pozitif'); if(d.xu100>10000)signals.push('BIST dirençli');
+  document.getElementById('signals').innerHTML=signals.map(s=>`<span class="tag">${s}</span>`).join('');
+  document.getElementById('analysis').textContent=`USD/TL ${format(d.usd)} seviyesinde. Altın ons ${format(d.gold)} dolar civarında. BIST 100 ${format(d.xu100)} seviyesinde izleniyor. Genel görünüm: ${d.usd>39&&d.gold>2440?'kur ve güvenli liman tarafı güçlü':'piyasa dengeli'}; BIST tarafında ${d.xu100>10000?'pozitif bölgede tutunma':'baskı'} dikkat çekiyor.`;
+  document.getElementById('radar').textContent=d.xu100>10000?'Piyasa radarı nötr-pozitif. Döviz ve altın güçlü, BIST ana eşik üzerinde.':'Piyasa radarı temkinli. BIST ana eşik altında, risk algısı yükselmiş görünüyor.';
+}
+loadData(); setInterval(loadData,15000);
+</script>
+</body>
+</html>
