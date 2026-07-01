@@ -1,96 +1,107 @@
-function round(n, digits = 2) {
-  return typeof n === 'number' && Number.isFinite(n) ? Number(n.toFixed(digits)) : null;
-}
-
-async function fetchJson(url) {
+async function fetchJson(url, timeoutMs = 8000) {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'user-agent': 'FinScope/0.5', 'accept': 'application/json' },
-      cache: 'no-store'
+      headers: {
+        'User-Agent': 'FinScope/0.8',
+        'Accept': 'application/json,text/plain,*/*'
+      }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
-    clearTimeout(id);
+    clearTimeout(timer);
   }
 }
 
-function parseYahooQuote(json, symbol) {
-  const row = json?.quoteResponse?.result?.find(x => x.symbol === symbol) || json?.quoteResponse?.result?.[0];
-  if (!row) return { value: null, changePct: null, status: 'unavailable', source: 'Yahoo Finance' };
+async function yahooPrice(symbol) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`;
+    const json = await fetchJson(url);
+    const result = json?.chart?.result?.[0];
+    const meta = result?.meta;
+    const price = meta?.regularMarketPrice ?? meta?.previousClose ?? null;
+    if (typeof price !== 'number') return null;
+    return {
+      value: price,
+      source: 'Yahoo Finance',
+      status: 'canlı/gecikmeli',
+      updatedAt: meta?.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : new Date().toISOString()
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function asset(label, category, value, currency, status, source, updatedAt, note) {
   return {
-    value: round(row.regularMarketPrice, 2),
-    changePct: round(row.regularMarketChangePercent, 2),
-    status: typeof row.regularMarketPrice === 'number' ? 'live' : 'unavailable',
-    source: 'Yahoo Finance'
+    label,
+    category,
+    value: typeof value === 'number' ? value : null,
+    currency: currency || '',
+    change: null,
+    status: status || 'veri yok',
+    source: source || 'bağlantı yok',
+    updatedAt: updatedAt || new Date().toISOString(),
+    note: note || ''
   };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
 
-  const assets = [];
   const now = new Date().toISOString();
+  const assets = [];
 
+  let rates = null;
   try {
     const fx = await fetchJson('https://open.er-api.com/v6/latest/USD');
-    const rates = fx?.rates || {};
-    const usdTry = rates.TRY;
-    const eurTry = usdTry && rates.EUR ? usdTry / rates.EUR : null;
-    const gbpTry = usdTry && rates.GBP ? usdTry / rates.GBP : null;
-    const eurUsd = rates.EUR ? 1 / rates.EUR : null;
-    const gbpUsd = rates.GBP ? 1 / rates.GBP : null;
-
-    assets.push(
-      { symbol: 'USDTRY', title: 'USD / TRY', value: round(usdTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: usdTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
-      { symbol: 'EURTRY', title: 'EUR / TRY', value: round(eurTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: eurTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
-      { symbol: 'GBPTRY', title: 'GBP / TRY', value: round(gbpTry, 4), unit: '₺', changePct: null, category: 'Döviz', status: gbpTry ? 'live' : 'unavailable', source: 'open.er-api.com' },
-      { symbol: 'EURUSD', title: 'EUR / USD', value: round(eurUsd, 4), unit: '', changePct: null, category: 'Parite', status: eurUsd ? 'live' : 'unavailable', source: 'open.er-api.com' },
-      { symbol: 'GBPUSD', title: 'GBP / USD', value: round(gbpUsd, 4), unit: '', changePct: null, category: 'Parite', status: gbpUsd ? 'live' : 'unavailable', source: 'open.er-api.com' }
-    );
-  } catch (e) {
-    ['USD / TRY','EUR / TRY','GBP / TRY','EUR / USD','GBP / USD'].forEach((title, i) => assets.push({ symbol: ['USDTRY','EURTRY','GBPTRY','EURUSD','GBPUSD'][i], title, value: null, unit: title.includes('TRY') ? '₺' : '', changePct: null, category: title.includes('TRY') ? 'Döviz' : 'Parite', status: 'unavailable', source: 'open.er-api.com' }));
-  }
-
-  const yahooSymbols = ['GC=F','SI=F','XU100.IS','XU050.IS','XU030.IS'];
-  try {
-    const y = await fetchJson('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(yahooSymbols.join(',')));
-    const map = {
-      'GC=F': ['GOLD', 'Altın Ons', '$', 'Kıymetli Maden'],
-      'SI=F': ['SILVER', 'Gümüş Ons', '$', 'Kıymetli Maden'],
-      'XU100.IS': ['XU100', 'BIST 100', '', 'Endeks'],
-      'XU050.IS': ['XU50', 'BIST 50', '', 'Endeks'],
-      'XU030.IS': ['XU30', 'BIST 30', '', 'Endeks']
-    };
-    for (const s of yahooSymbols) {
-      const q = parseYahooQuote(y, s);
-      const [symbol, title, unit, category] = map[s];
-      assets.push({ symbol, title, value: q.value, unit, changePct: q.changePct, category, status: q.status, source: q.source });
+    if (fx?.result === 'success' && fx?.rates?.TRY && fx?.rates?.EUR && fx?.rates?.GBP) {
+      rates = fx.rates;
+      const updatedAt = fx.time_last_update_unix ? new Date(fx.time_last_update_unix * 1000).toISOString() : now;
+      assets.push(asset('USD / TRY', 'Döviz', rates.TRY, '₺', 'canlı', 'open.er-api.com', updatedAt));
+      assets.push(asset('EUR / TRY', 'Döviz', rates.TRY / rates.EUR, '₺', 'canlı', 'open.er-api.com', updatedAt));
+      assets.push(asset('GBP / TRY', 'Döviz', rates.TRY / rates.GBP, '₺', 'canlı', 'open.er-api.com', updatedAt));
+      assets.push(asset('EUR / USD', 'Parite', 1 / rates.EUR, '', 'canlı', 'open.er-api.com', updatedAt));
+      assets.push(asset('GBP / USD', 'Parite', 1 / rates.GBP, '', 'canlı', 'open.er-api.com', updatedAt));
     }
-  } catch (e) {
-    [
-      ['GOLD', 'Altın Ons', '$', 'Kıymetli Maden'],
-      ['SILVER', 'Gümüş Ons', '$', 'Kıymetli Maden'],
-      ['XU100', 'BIST 100', '', 'Endeks'],
-      ['XU50', 'BIST 50', '', 'Endeks'],
-      ['XU30', 'BIST 30', '', 'Endeks']
-    ].forEach(([symbol,title,unit,category]) => assets.push({ symbol, title, value: null, unit, changePct: null, category, status: 'unavailable', source: 'Yahoo Finance' }));
+  } catch (_) {}
+
+  if (!rates) {
+    assets.push(asset('USD / TRY', 'Döviz', null, '₺', 'veri alınamadı', 'open.er-api.com', now));
+    assets.push(asset('EUR / TRY', 'Döviz', null, '₺', 'veri alınamadı', 'open.er-api.com', now));
+    assets.push(asset('GBP / TRY', 'Döviz', null, '₺', 'veri alınamadı', 'open.er-api.com', now));
+    assets.push(asset('EUR / USD', 'Parite', null, '', 'veri alınamadı', 'open.er-api.com', now));
+    assets.push(asset('GBP / USD', 'Parite', null, '', 'veri alınamadı', 'open.er-api.com', now));
   }
 
-  ['PBR','PHE','TLY'].forEach(symbol => assets.push({
-    symbol,
-    title: symbol,
-    value: null,
-    unit: '',
-    changePct: null,
-    category: 'TEFAS Fon',
-    status: 'not_connected',
-    source: 'TEFAS bağlantısı yok'
-  }));
+  const gold = await yahooPrice('GC=F');
+  assets.push(gold ? asset('Altın Ons', 'Kıymetli maden', gold.value, '$', gold.status, gold.source, gold.updatedAt) : asset('Altın Ons', 'Kıymetli maden', null, '$', 'veri alınamadı', 'Yahoo Finance', now));
 
-  res.status(200).json({ updatedAt: now, assets });
-}
+  const silver = await yahooPrice('SI=F');
+  assets.push(silver ? asset('Gümüş Ons', 'Kıymetli maden', silver.value, '$', silver.status, silver.source, silver.updatedAt) : asset('Gümüş Ons', 'Kıymetli maden', null, '$', 'veri alınamadı', 'Yahoo Finance', now));
+
+  const xu100 = await yahooPrice('XU100.IS');
+  assets.push(xu100 ? asset('BIST 100', 'BIST', xu100.value, '', xu100.status, xu100.source, xu100.updatedAt) : asset('BIST 100', 'BIST', null, '', 'veri alınamadı', 'Yahoo Finance', now));
+
+  const xu50 = await yahooPrice('XU050.IS');
+  assets.push(xu50 ? asset('BIST 50', 'BIST', xu50.value, '', xu50.status, xu50.source, xu50.updatedAt) : asset('BIST 50', 'BIST', null, '', 'veri alınamadı', 'Yahoo Finance', now));
+
+  const xu30 = await yahooPrice('XU030.IS');
+  assets.push(xu30 ? asset('BIST 30', 'BIST', xu30.value, '', xu30.status, xu30.source, xu30.updatedAt) : asset('BIST 30', 'BIST', null, '', 'veri alınamadı', 'Yahoo Finance', now));
+
+  assets.push(asset('PBR', 'TEFAS Fon', null, '', 'TEFAS bağlantısı yok', 'TEFAS API sonraki sürüm', now, 'Gerçek TEFAS verisi bağlanmadan değer gösterilmeyecek.'));
+  assets.push(asset('PHE', 'TEFAS Fon', null, '', 'TEFAS bağlantısı yok', 'TEFAS API sonraki sürüm', now, 'Gerçek TEFAS verisi bağlanmadan değer gösterilmeyecek.'));
+  assets.push(asset('TLY', 'TEFAS Fon', null, '', 'TEFAS bağlantısı yok', 'TEFAS API sonraki sürüm', now, 'Gerçek TEFAS verisi bağlanmadan değer gösterilmeyecek.'));
+
+  res.status(200).json({
+    version: '0.8',
+    updatedAt: now,
+    assets,
+    liveCount: assets.filter(a => a.value !== null).length,
+    totalCount: assets.length
+  });
+};

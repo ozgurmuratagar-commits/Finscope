@@ -1,1 +1,9 @@
-{"name":"finscope-static","version":"0.7.0","private":true,"scripts":{"build":"mkdir -p public && cp index.html public/index.html"},"dependencies":{},"devDependencies":{}}
+{
+  "name": "finscope-static-market-engine",
+  "version": "0.8.0",
+  "private": true,
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {}
+}
