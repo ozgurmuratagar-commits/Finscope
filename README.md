@@ -1,5 +1,14 @@
-# FinScope Professional v2.0
+# FinScope Professional v2.1
 
-Profesyonel arayüz, sol menü, tıklanabilir kartlar, AI paneli, piyasa radarı, TEFAS/portföy/alarm yol haritası.
+Bu sürümde görünür değişiklikler:
 
-Yükleme: index.html, package.json, vercel.json, README.md, .gitignore ve api klasörünü GitHub'a yükleyin.
+- Sol menülü profesyonel ekran korunur.
+- TEFAS ekranı eklendi: PBR, PHE, TLY, TZL, IIF, IRV, UZY.
+- Fon kartları tıklanınca detay penceresi açılır.
+- Portföyüm ekranı eklendi.
+- Alarm Merkezi ekranı eklendi.
+- Veri durumu her kartta açıkça gösterilir.
+- Yanlış veri göstermemek için canlı alınamayan varlıklarda `—` gösterilir.
+- Dövizler ve pariteler canlı API üzerinden denenir.
+
+Kalıcı adres: https://finscope-six.vercel.app

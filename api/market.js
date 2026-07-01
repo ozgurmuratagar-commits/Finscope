@@ -1,24 +1,54 @@
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-store');
-  const out = { updatedAt: new Date().toISOString(), usdTry: null, eurTry: null, gbpTry: null, eurUsd: null, gbpUsd: null, gold: null, silver: null, xu100: null, xu50: null, xu30: null };
-  try {
-    const fx = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
-    if (fx && fx.rates && fx.rates.TRY && fx.rates.EUR && fx.rates.GBP) {
-      out.usdTry = fx.rates.TRY;
-      out.eurTry = fx.rates.TRY / fx.rates.EUR;
-      out.gbpTry = fx.rates.TRY / fx.rates.GBP;
-      out.eurUsd = 1 / fx.rates.EUR;
-      out.gbpUsd = 1 / fx.rates.GBP;
-    }
-  } catch(e) {}
-  async function yf(symbol){
-    try{const j=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?range=1d&interval=1d',{headers:{'User-Agent':'Mozilla/5.0'}}).then(r=>r.json());return j?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;}catch(e){return null;}
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  const result = {
+    ok: true,
+    updatedAt: new Date().toISOString(),
+    fx: null,
+    market: {},
+    notes: []
+  };
+
+  async function fetchJson(url) {
+    const r = await fetch(url, { headers: { 'User-Agent': 'FinScope/2.1' } });
+    if (!r.ok) throw new Error(`${r.status} ${url}`);
+    return r.json();
   }
-  out.gold = await yf('GC=F');
-  out.silver = await yf('SI=F');
-  out.xu100 = await yf('XU100.IS');
-  out.xu50 = await yf('XU050.IS');
-  out.xu30 = await yf('XU030.IS');
-  res.status(200).json(out);
-}
+
+  try {
+    const fx = await fetchJson('https://open.er-api.com/v6/latest/USD');
+    if (fx && fx.rates && fx.rates.TRY) {
+      result.fx = {
+        source: 'open.er-api.com',
+        usdTry: fx.rates.TRY,
+        eurTry: fx.rates.TRY / fx.rates.EUR,
+        gbpTry: fx.rates.TRY / fx.rates.GBP,
+        eurUsd: 1 / fx.rates.EUR,
+        gbpUsd: 1 / fx.rates.GBP
+      };
+    } else {
+      result.notes.push('Döviz verisi beklenen formatta gelmedi.');
+    }
+  } catch (e) {
+    result.notes.push('Döviz verisi alınamadı: ' + e.message);
+  }
+
+  // Yahoo Finance sembolleri gecikmeli olabilir. Veri alınamazsa UI değer göstermez.
+  const yahooSymbols = ['GC=F','SI=F','XU100.IS','XU050.IS','XU030.IS'];
+  try {
+    const url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(yahooSymbols.join(','));
+    const y = await fetchJson(url);
+    const rows = y?.quoteResponse?.result || [];
+    for (const row of rows) {
+      result.market[row.symbol] = {
+        price: row.regularMarketPrice ?? null,
+        changePercent: row.regularMarketChangePercent ?? null,
+        source: 'Yahoo Finance',
+        delayed: true
+      };
+    }
+  } catch (e) {
+    result.notes.push('Yahoo Finance verisi alınamadı: ' + e.message);
+  }
+
+  res.status(200).json(result);
+};

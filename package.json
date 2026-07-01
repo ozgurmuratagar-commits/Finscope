@@ -1,1 +1,9 @@
-{"name":"finscope-professional-v20","version":"2.0.0","private":true,"scripts":{"start":"serve .","build":"echo static build ok"},"dependencies":{"serve":"latest"},"devDependencies":{}}
+{
+  "name": "finscope-professional-v21",
+  "version": "2.1.0",
+  "private": true,
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {}
+}
