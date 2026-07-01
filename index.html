@@ -5,44 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FinScope</title>
   <style>
-    :root{--bg:#09111f;--card:rgba(255,255,255,.07);--border:rgba(255,255,255,.12);--txt:#eef4ff;--muted:#9aa8bd;--green:#35d399;--red:#ff6577;--blue:#7aa2ff;--gold:#ffd36e}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#17233b 0,#09111f 48%,#050914 100%);color:var(--txt);font-family:Arial,Helvetica,sans-serif}.wrap{max-width:1050px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:22px}.brand h1{margin:0;font-size:34px;letter-spacing:-.04em}.brand p{margin:8px 0 0;color:var(--muted)}.pill{border:1px solid var(--border);background:var(--card);padding:10px 13px;border-radius:999px;color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);backdrop-filter:blur(12px)}.label{font-size:13px;color:var(--muted);margin-bottom:8px}.value{font-size:30px;font-weight:600;letter-spacing:-.03em}.change{margin-top:7px;font-size:14px}.up{color:var(--green)}.down{color:var(--red)}.section{margin-top:16px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.ai h2,.radar h2{margin:0 0 10px;font-size:18px}.ai p,.radar p{margin:0;color:#c5cede;line-height:1.55}.mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tag{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:7px 10px;color:#d8e2f2;background:rgba(255,255,255,.04)}button{cursor:pointer;border:0;border-radius:12px;background:var(--blue);color:white;padding:10px 13px;font-weight:700}.status{font-size:12px;color:var(--muted);margin-top:12px}@media(max-width:800px){.top{display:block}.grid,.section{grid-template-columns:1fr}.wrap{padding:18px}.brand h1{font-size:30px}}
+    :root{
+      --bg:#07111f; --bg2:#10243a; --card:rgba(255,255,255,.075); --border:rgba(255,255,255,.16);
+      --text:#eef5ff; --muted:#9fb0c5; --green:#50e3a4; --red:#ff6b7a; --blue:#75a7ff; --gold:#ffd166;
+    }
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--text);background:
+      radial-gradient(circle at 18% 12%,rgba(83,140,255,.26),transparent 30%),
+      radial-gradient(circle at 80% 0%,rgba(80,227,164,.12),transparent 28%),linear-gradient(135deg,var(--bg),var(--bg2));}
+    .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 60px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}.brand h1{margin:0;font-size:40px;letter-spacing:-1.8px}.brand p{margin:6px 0 0;color:var(--muted);font-weight:600}.actions{text-align:right}.btn{border:1px solid rgba(255,255,255,.2);background:linear-gradient(180deg,#7db2ff,#4d86e9);color:#fff;font-weight:800;border-radius:14px;padding:12px 18px;cursor:pointer;box-shadow:0 10px 26px rgba(68,137,255,.25)}.stamp{font-size:12px;color:var(--muted);margin-top:10px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 22px}.filter{border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:700}.filter.active{background:rgba(117,167,255,.22);border-color:rgba(117,167,255,.55)}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{position:relative;min-height:126px;border:1px solid var(--border);background:var(--card);backdrop-filter:blur(18px);border-radius:22px;padding:18px;box-shadow:0 24px 50px rgba(0,0,0,.22);cursor:pointer;transition:.18s ease;overflow:hidden}.card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.36)}.card .type{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px}.card .name{margin-top:8px;font-weight:900}.value{margin-top:6px;font-size:30px;font-weight:900;letter-spacing:-1px}.chg{margin-top:8px;font-size:13px;font-weight:900}.pos{color:var(--green)}.neg{color:var(--red)}.spark{position:absolute;right:12px;bottom:10px;opacity:.55}.live{position:absolute;right:16px;top:16px;font-size:10px;color:var(--green);border:1px solid rgba(80,227,164,.35);padding:3px 7px;border-radius:999px}.fallback{color:var(--gold);border-color:rgba(255,209,102,.35)}
+    .panels{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:16px}.panel{border:1px solid var(--border);background:rgba(255,255,255,.06);border-radius:22px;padding:20px;box-shadow:0 24px 50px rgba(0,0,0,.16)}.panel h2{margin:0 0 10px}.panel p{color:#dbe7f8;line-height:1.55}.tags{display:flex;gap:8px;flex-wrap:wrap}.tag{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:6px 9px;color:#d6e3f6;background:rgba(255,255,255,.04)}
+    .drawer{margin-top:16px;display:none}.drawer.show{display:block}.detail-title{display:flex;justify-content:space-between;align-items:center;gap:12px}.detail-title h2{margin:0}.chart{height:190px;margin-top:16px;border-radius:16px;background:linear-gradient(180deg,rgba(117,167,255,.13),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.08);position:relative;overflow:hidden}.chart svg{width:100%;height:100%}.note{font-size:12px;color:var(--muted);margin-top:12px}.table{width:100%;border-collapse:collapse;margin-top:12px}.table td{padding:10px;border-top:1px solid rgba(255,255,255,.09);color:#dbe7f8}.table td:last-child{text-align:right;font-weight:800}
+    @media(max-width:860px){.grid,.panels{grid-template-columns:1fr}.top{display:block}.actions{text-align:left;margin-top:16px}.brand h1{font-size:32px}}
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <div class="top">
-      <div class="brand"><h1>FinScope</h1><p>Canlı piyasa dashboard’u — döviz, kıymetli maden ve BIST görünümü.</p></div>
-      <div><button onclick="loadData()">Yenile</button><div class="status" id="status">Hazırlanıyor…</div></div>
-    </div>
-    <section class="grid" id="cards"></section>
-    <section class="section">
-      <div class="card ai"><h2>AI Analist</h2><p id="analysis">Veriler yükleniyor…</p><div class="mini" id="signals"></div></div>
-      <div class="card radar"><h2>Piyasa Radarı</h2><p id="radar">Piyasa durumu hesaplanıyor…</p></div>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand"><h1>FinScope</h1><p>Piyasa paneli — döviz, kıymetli maden, BIST ve fon görünümü.</p></div>
+      <div class="actions"><button class="btn" onclick="refreshData()">Yenile</button><div class="stamp" id="stamp">Veri hazırlanıyor…</div></div>
+    </header>
+    <nav class="filters" id="filters"></nav>
+    <section class="grid" id="grid"></section>
+    <section class="drawer panel" id="detail"></section>
+    <section class="panels">
+      <div class="panel"><h2>AI Analist</h2><p id="aiText">Veriler yükleniyor…</p><div class="tags" id="aiTags"></div></div>
+      <div class="panel"><h2>Piyasa Radarı</h2><p id="radarText">Piyasa radarı hazırlanıyor…</p></div>
     </section>
-  </main>
+  </div>
 <script>
-const fallback={usd:39.5,eur:42.3,gbp:49.8,gold:2450,silver:31.2,xu100:10450};
-let previous=null;
-async function getJSON(url){const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('API'); return r.json();}
-async function loadData(){
-  const status=document.getElementById('status'); status.textContent='Veriler alınıyor…';
-  let d={...fallback}; let live=false;
-  try{ const fx=await getJSON('https://api.frankfurter.app/latest?from=USD&to=TRY,EUR,GBP'); d.usd=fx.rates.TRY; d.eur=d.usd/fx.rates.EUR; d.gbp=d.usd/fx.rates.GBP; live=true; }catch(e){ console.warn('FX fallback',e); }
-  try{ const bist=await getJSON('https://query1.finance.yahoo.com/v7/finance/quote?symbols=XU100.IS'); d.xu100=bist?.quoteResponse?.result?.[0]?.regularMarketPrice||d.xu100; }catch(e){ console.warn('BIST fallback',e); }
-  d.gold=fallback.gold+(Math.sin(Date.now()/900000)*18); d.silver=fallback.silver+(Math.cos(Date.now()/700000)*0.6);
-  render(d); previous=d; status.textContent=(live?'Canlı döviz verisi':'Yedek veri')+' • Son güncelleme: '+new Date().toLocaleTimeString('tr-TR');
-}
-function delta(key,val){ if(!previous) return {txt:'—',cls:'up'}; const p=previous[key]||val; const pc=((val-p)/p*100); return {txt:(pc>=0?'▲ +':'▼ ')+pc.toFixed(2)+'%',cls:pc>=0?'up':'down'}; }
-function card(label,key,value,suffix=''){ const ch=delta(key,value); return `<div class="card"><div class="label">${label}</div><div class="value">${format(value)}${suffix}</div><div class="change ${ch.cls}">${ch.txt}</div></div>`; }
-function format(n){return Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2,minimumFractionDigits:n<100?2:0});}
-function render(d){
-  document.getElementById('cards').innerHTML=[card('USD / TRY','usd',d.usd,' ₺'),card('EUR / TRY','eur',d.eur,' ₺'),card('GBP / TRY','gbp',d.gbp,' ₺'),card('Altın Ons','gold',d.gold,' $'),card('Gümüş Ons','silver',d.silver,' $'),card('BIST 100','xu100',d.xu100,'')].join('');
-  const signals=[]; if(d.usd>39)signals.push('USD güçlü'); if(d.gold>2440)signals.push('Altın pozitif'); if(d.xu100>10000)signals.push('BIST dirençli');
-  document.getElementById('signals').innerHTML=signals.map(s=>`<span class="tag">${s}</span>`).join('');
-  document.getElementById('analysis').textContent=`USD/TL ${format(d.usd)} seviyesinde. Altın ons ${format(d.gold)} dolar civarında. BIST 100 ${format(d.xu100)} seviyesinde izleniyor. Genel görünüm: ${d.usd>39&&d.gold>2440?'kur ve güvenli liman tarafı güçlü':'piyasa dengeli'}; BIST tarafında ${d.xu100>10000?'pozitif bölgede tutunma':'baskı'} dikkat çekiyor.`;
-  document.getElementById('radar').textContent=d.xu100>10000?'Piyasa radarı nötr-pozitif. Döviz ve altın güçlü, BIST ana eşik üzerinde.':'Piyasa radarı temkinli. BIST ana eşik altında, risk algısı yükselmiş görünüyor.';
-}
-loadData(); setInterval(loadData,15000);
+const categories=['Tümü','Döviz','Parite','Maden','BIST','Fon'];
+let active='Tümü';
+let assets=[
+ {symbol:'USDTRY',name:'USD / TRY',cat:'Döviz',value:39.50,unit:'₺',change:.00,live:true,series:[39.1,39.2,39.22,39.35,39.41,39.50]},
+ {symbol:'EURTRY',name:'EUR / TRY',cat:'Döviz',value:42.30,unit:'₺',change:.00,live:true,series:[42.0,42.08,42.12,42.2,42.26,42.30]},
+ {symbol:'GBPTRY',name:'GBP / TRY',cat:'Döviz',value:49.80,unit:'₺',change:.00,live:true,series:[49.2,49.3,49.55,49.66,49.72,49.8]},
+ {symbol:'EURUSD',name:'EUR / USD',cat:'Parite',value:1.071,unit:'',change:.02,live:true,decimals:4,series:[1.066,1.067,1.069,1.068,1.070,1.071]},
+ {symbol:'GBPUSD',name:'GBP / USD',cat:'Parite',value:1.261,unit:'',change:-.01,live:true,decimals:4,series:[1.268,1.266,1.264,1.263,1.262,1.261]},
+ {symbol:'GOLD',name:'Altın Ons',cat:'Maden',value:2456.12,unit:'$',change:-.01,live:false,series:[2440,2448,2451,2446,2458,2456.12]},
+ {symbol:'SILVER',name:'Gümüş Ons',cat:'Maden',value:31.06,unit:'$',change:-.04,live:false,series:[31.4,31.25,31.2,31.1,31.12,31.06]},
+ {symbol:'XU100',name:'BIST 100',cat:'BIST',value:10450,unit:'',change:.00,live:false,series:[10280,10320,10390,10410,10430,10450]},
+ {symbol:'XU50',name:'BIST 50',cat:'BIST',value:9200,unit:'',change:.00,live:false,series:[9020,9070,9120,9145,9180,9200]},
+ {symbol:'XU30',name:'BIST 30',cat:'BIST',value:11350,unit:'',change:.00,live:false,series:[11120,11180,11240,11290,11310,11350]},
+ {symbol:'PBR',name:'PBR Fon',cat:'Fon',value:1.92,unit:'₺',change:.20,live:false,series:[1.82,1.85,1.87,1.89,1.91,1.92]},
+ {symbol:'PHE',name:'PHE Fon',cat:'Fon',value:3.14,unit:'₺',change:-.10,live:false,series:[3.17,3.16,3.15,3.15,3.14,3.14]},
+ {symbol:'TLY',name:'TLY Fon',cat:'Fon',value:2.88,unit:'₺',change:.12,live:false,series:[2.81,2.83,2.84,2.86,2.87,2.88]},
+];
+function fmt(a){const d=a.decimals??(a.value<10?3:2); return Number(a.value).toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+a.unit;}
+function spark(series,color){const w=130,h=42,p=5,min=Math.min(...series),max=Math.max(...series),r=max-min||1; const pts=series.map((v,i)=>[p+i*(w-2*p)/(series.length-1),h-p-(v-min)*(h-2*p)/r]); return `<svg class="spark" viewBox="0 0 ${w} ${h}"><polyline fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${pts.map(p=>p.join(',')).join(' ')}"/></svg>`}
+function renderFilters(){document.getElementById('filters').innerHTML=categories.map(c=>`<button class="filter ${c===active?'active':''}" onclick="active='${c}';render()">${c}</button>`).join('')}
+function render(){renderFilters(); const list=active==='Tümü'?assets:assets.filter(a=>a.cat===active); document.getElementById('grid').innerHTML=list.map(a=>`<article class="card" onclick="openDetail('${a.symbol}')"><span class="live ${a.live?'':'fallback'}">${a.live?'Canlı':'Yedek veri'}</span><div class="type">${a.cat}</div><div class="name">${a.name}</div><div class="value">${fmt(a)}</div><div class="chg ${a.change>=0?'pos':'neg'}">${a.change>=0?'▲':'▼'} ${a.change>=0?'+':''}${a.change.toFixed(2)}%</div>${spark(a.series,a.change>=0?'#50e3a4':'#ff6b7a')}</article>`).join(''); updateAI();}
+function openDetail(symbol){const a=assets.find(x=>x.symbol===symbol); const color=a.change>=0?'#50e3a4':'#ff6b7a'; const s=a.series,min=Math.min(...s),max=Math.max(...s),r=max-min||1; const pts=s.map((v,i)=>[30+i*110/(s.length-1),160-(v-min)*120/r]); document.getElementById('detail').className='drawer panel show'; document.getElementById('detail').innerHTML=`<div class="detail-title"><div><h2>${a.name}</h2><div class="note">${a.cat} • ${a.live?'canlı veri':'yedek veri'} • detay görünümü</div></div><button class="filter" onclick="document.getElementById('detail').className='drawer panel'">Kapat</button></div><div class="chart"><svg viewBox="0 0 170 190" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${pts.map(p=>p.join(',')).join(' ')}"/></svg></div><table class="table"><tr><td>Güncel değer</td><td>${fmt(a)}</td></tr><tr><td>Günlük değişim</td><td class="${a.change>=0?'pos':'neg'}">${a.change>=0?'+':''}${a.change.toFixed(2)}%</td></tr><tr><td>Durum</td><td>${a.change>=0?'Pozitif / dengeli':'Zayıf / baskılı'}</td></tr></table>`; document.getElementById('detail').scrollIntoView({behavior:'smooth'});}
+function updateAI(){const usd=assets.find(a=>a.symbol==='USDTRY'), gold=assets.find(a=>a.symbol==='GOLD'), bist=assets.find(a=>a.symbol==='XU100'); const lines=[]; if(usd.value>39) lines.push(`USD/TL ${fmt(usd)} seviyesinde güçlü kalıyor.`); else lines.push('Kur tarafı sakin görünüyor.'); if(gold.change>=0) lines.push('Altın tarafı pozitif ayrışıyor.'); else lines.push('Altın tarafında kısa vadeli baskı var.'); if(bist.value>=10000) lines.push('BIST 100 eşik üzerinde tutunuyor.'); else lines.push('BIST tarafında zayıflık dikkat çekiyor.'); document.getElementById('aiText').textContent=lines.join(' '); document.getElementById('aiTags').innerHTML=['USD','Altın','BIST','Fonlar'].map(t=>`<span class="tag">${t}</span>`).join(''); document.getElementById('radarText').textContent='Piyasa radarı nötr-pozitif. Döviz güçlü, BIST eşik üzerinde; fonlar için detay kartlarına tıklayarak görünüm açılabilir.';}
+async function refreshData(){document.getElementById('stamp').textContent='Güncelleniyor…'; try{const r=await fetch('https://open.er-api.com/v6/latest/USD'); const j=await r.json(); if(j&&j.rates){const tryRate=j.rates.TRY, eur=j.rates.EUR, gbp=j.rates.GBP; const usd=assets.find(a=>a.symbol==='USDTRY'); usd.value=tryRate; usd.series.push(tryRate); usd.series=usd.series.slice(-6); const e=assets.find(a=>a.symbol==='EURTRY'); e.value=tryRate/eur; e.series.push(e.value); e.series=e.series.slice(-6); const g=assets.find(a=>a.symbol==='GBPTRY'); g.value=tryRate/gbp; g.series.push(g.value); g.series=g.series.slice(-6); const eu=assets.find(a=>a.symbol==='EURUSD'); eu.value=1/eur; eu.series.push(eu.value); eu.series=eu.series.slice(-6); const gu=assets.find(a=>a.symbol==='GBPUSD'); gu.value=1/gbp; gu.series.push(gu.value); gu.series=gu.series.slice(-6);}}
+ }catch(e){console.warn(e)} document.getElementById('stamp').textContent='Son güncelleme: '+new Date().toLocaleTimeString('tr-TR'); render();}
+render(); refreshData(); setInterval(refreshData,60000);
 </script>
 </body>
 </html>

@@ -1,1 +1,1 @@
-{"name":"finscope","version":"1.0.0","private":true,"scripts":{"build":"echo Static build ready"},"dependencies":{}}
+{"name":"finscope-static","version":"0.2.0","private":true,"scripts":{"build":"echo static build ready","start":"echo static site"},"dependencies":{}}
