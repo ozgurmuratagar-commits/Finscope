@@ -1,12 +1,9 @@
-# FinScope v0.8 Market Engine
+# FinScope v0.9 Market Core
 
-Bu sürümde yanlış/yedek finans verisi gösterilmez.
-Canlı alınabilen veriler gösterilir; alınamayanlarda `—` ve durum bilgisi görünür.
+Bu paket mevcut çalışan FinScope statik uygulamasını güvenli şekilde günceller.
 
-Yüklenecek dosyalar:
-- index.html
-- api/market.js
-- package.json
-- vercel.json
-- README.md
-- .gitignore
+- Dövizler `open.er-api.com` üzerinden alınır.
+- Altın, gümüş ve BIST verileri Vercel serverless API üzerinden Yahoo Finance'ten denenir.
+- Veri alınamayan alanlarda yanlış/yedek değer gösterilmez.
+- Detay penceresi ortada açılır.
+- Ekranda sürüm `v0.9` yazar.

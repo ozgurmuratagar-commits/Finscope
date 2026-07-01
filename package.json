@@ -1,6 +1,6 @@
 {
-  "name": "finscope-static-market-engine",
-  "version": "0.8.0",
+  "name": "finscope",
+  "version": "0.9.0",
   "private": true,
   "scripts": {
     "start": "vercel dev"
